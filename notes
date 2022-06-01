@@ -1,0 +1,10 @@
+Starting date 04-05-2022
+
+syntax
+    manile {variable_name} ma {value/expr} che
+    {value/expr} ne {value/expr} sarkhu
+    {value/expr} karta {value/expr} [alag,motu,nanu]
+
+equivalence
+    kharu = true
+    khotu = false

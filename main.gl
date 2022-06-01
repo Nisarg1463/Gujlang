@@ -1,0 +1,46 @@
+/*
+manile age ma 12 che
+jo 18 karta age nanu hoi
+    manile var ma kharu che
+naito
+    manile var ma khotu che    
+
+# this is comment
+
+
+jo var hoi
+    manile name ma 'nisarg {age} ' che
+naito jo age karta 10 motu nathi hoi
+    manile name ma "Test" che
+
+
+manile i ma 0 che
+manile total ma 0 che
+jya sudhi i karta 10 motu hoi 
+    manile i ma i+1 che
+    manile total ma total+i che
+
+
+manile a ma [12,13,14] che
+
+manile total ma 0 che
+a ma badha i mate
+    jo i ne 13 alag hoi
+        manile total ma total + i che
+
+
+manile a ma 0 ... 12 ... 3 che
+*/
+
+/*
+manile total ma 0 che
+manile x ma 1 ... 10 che
+
+x ma badha i mate
+    manile total ma total + i * i che
+*/
+
+add jelese a,b,c
+    manile total ma a+b+c che
+
+add([1,2,3],1,2)
