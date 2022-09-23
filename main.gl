@@ -42,5 +42,7 @@ x ma badha i mate
 
 add jelese a,b,c
     manile total ma a+b+c che
+    mokalse a+b+c
 
-add([1,2,3],1,2)
+add(1,2,3)
+manile xyz ma add(5,6,7)+1 che

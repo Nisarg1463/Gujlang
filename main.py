@@ -62,7 +62,10 @@ else:
         # print(ast)
 
         interpreter = Interpreter(ast)
-        interpreter.interpret(identifiers)
+        error = interpreter.interpret(identifiers)
         del interpreter
+
+        if error:
+            print(error)
 
         print(identifiers)

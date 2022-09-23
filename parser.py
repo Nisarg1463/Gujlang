@@ -36,9 +36,10 @@ class ListNode:
 
 
 class FunctionCall:
-    def __init__(self, args, name):
+    def __init__(self, args, name, pos):
         self.args = args
         self.name = name
+        self.pos = pos
 
 
 class FunctionNode:
@@ -431,6 +432,10 @@ class Parser:
                             break
                         iteration.advance()
                     args = deepcopy(self.tokens[start_idx.value() : iteration.value()])
+                    processed_args = []
+                    for i in args:
+                        if i.tt != tt_comma:
+                            processed_args.append(i)
                     iteration.advance()
                     save = iteration.copy()
                     while iteration.value() < len(self.tokens) - 1:
@@ -450,7 +455,31 @@ class Parser:
                     ast2, error = parser.make_tree()
                     if error:
                         return None, error
-                    ast.nodes.append(FunctionNode(ast2, args, identifier))
+                    ast.nodes.append(FunctionNode(ast2, processed_args, identifier))
+                elif self.tokens[iteration.value()].value == "mokalse":
+                    iteration.advance()
+                    start = iteration.copy()
+
+                    save = len(self.tokens)
+                    while iteration.value() < len(self.tokens):
+                        if self.tokens[iteration.value()].tt == tt_new_line:
+                            break
+                        iteration.advance()
+                    end = iteration.copy()
+                    expr, error = self.make_bin_expr(start, end)
+                    if error:
+                        return None, error
+                    ast.nodes.append(
+                        VariableNode(
+                            Token(
+                                self.tokens[iteration.value()].pos_start,
+                                self.tokens[iteration.value()].pos_end,
+                                tt_identifier,
+                                "func_return_var",
+                            ),
+                            expr,
+                        )
+                    )
             elif self.tokens[iteration.value()].tt == tt_identifier:
                 identifier_idx = iteration.copy()
                 if (
@@ -458,6 +487,7 @@ class Parser:
                     and self.tokens[iteration.value() + 1].tt == tt_lparam
                 ):
                     save = iteration.copy()
+                    save.advance()
                     save.advance()
                     while iteration.value() < len(self.tokens):
                         if self.tokens[iteration.value()].tt == tt_rparam:
@@ -468,8 +498,17 @@ class Parser:
                                 )
                             break
                         iteration.advance()
+                    args, error = self.prepare_args(
+                        args, self.tokens[identifier_idx.value()]
+                    )
+                    if error:
+                        return None, error
                     ast.nodes.append(
-                        FunctionCall(args, self.tokens[identifier_idx.value()].value)
+                        FunctionCall(
+                            args,
+                            self.tokens[identifier_idx.value()].value,
+                            self.tokens[identifier_idx.value()].pos_start,
+                        )
                     )
             elif self.tokens[iteration.value()].tt == tt_comment:
                 while (
@@ -491,6 +530,54 @@ class Parser:
                 return None, error
             ast.nodes.append(ast2)
         return ast, None
+
+    def prepare_args(self, args, name):
+        iteration = 0
+        processed_args = []
+        expr = []
+        while iteration < len(args):
+            initial = iteration
+            if args[iteration].tt == tt_list_start:
+                count = 1
+                iteration += 1
+                while iteration < len(args):
+                    if args[iteration].tt == tt_list_start:
+                        count += 1
+                    elif args[iteration].tt == tt_list_end:
+                        count -= 1
+                        if count == 0:
+                            break
+                    iteration += 1
+                if iteration == len(args):
+                    return None, Error(
+                        "ParametersNotProper",
+                        f"parameters check karo list band nathi kari {name.pos_start} aa function call ma",
+                    )
+                initial += 1
+                lst, error = self.prepare_args(args[initial:iteration], name)
+                if error:
+                    return None, error
+                processed_args.append(lst)
+                iteration += 1
+                continue
+            elif args[iteration].tt == tt_comma:
+                parser = Parser(expr)
+                ast_temp, error = parser.make_bin_expr(Index(0), Index(len(expr)))
+                if error:
+                    return None, error
+                processed_args.append(ast_temp)
+                expr = []
+                iteration += 1
+                continue
+            expr.append(args[iteration])
+            iteration += 1
+        parser = Parser(expr)
+        ast_temp, error = parser.make_bin_expr(Index(0), Index(len(expr)))
+        if error:
+            return None, error
+        processed_args.append(ast_temp)
+        expr = []
+        return processed_args, None
 
     def make_conditional_node(self, start, end):
         temp = start.copy()
@@ -667,7 +754,6 @@ class Parser:
         error = self.make_list(start, end)
         if error:
             return None, error
-
         node, error = self.make_conditional_expr(start, end)
         if error:
             return None, error
@@ -718,6 +804,21 @@ class Parser:
                 return ast.nodes[0], None
             if type(token) == ListNode:
                 return token, None
+        if (
+            self.tokens[start.value()].tt == tt_identifier
+            and type(self.tokens[start.value() + 1]) == BracketNode
+        ):
+            args, error = self.prepare_args(
+                self.tokens[start.value() + 1].tokens, self.tokens[start.value()]
+            )
+            return (
+                FunctionCall(
+                    args,
+                    self.tokens[start.value()].value,
+                    self.tokens[start.value()].pos_start,
+                ),
+                None,
+            )
         return None, Error(
             "NodeNotUnderstood",
             f"aa node samaj nai paido index {start.value()} thi {end.value()}",

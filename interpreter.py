@@ -1,3 +1,4 @@
+from errno import EROFS
 from lexer import Token
 from parser import (
     BinaryNode,
@@ -17,7 +18,7 @@ class Interpreter:
     def __init__(self, ast):
         self.ast = ast
 
-    def interpret(self, identifiers, local_identifiers=None):
+    def interpret(self, identifiers):
         identifiers.pop("res", 1)
         for node in self.ast.nodes:
             if type(node) == VariableNode:
@@ -25,7 +26,6 @@ class Interpreter:
                     identifiers[node.name] = self.solve_expr(node.value, identifiers)
                 elif type(node.value) in [Token, ListNode]:
                     if node.value.tt == tt_fstring:
-                        print(1)
                         value = node.value.value
                         i = 0
                         dic = {}
@@ -78,20 +78,38 @@ class Interpreter:
                         interpret = Interpreter(node.program)
                         interpret.interpret(identifiers)
             elif type(node) == FunctionNode:
-                identifiers[node.name] = node
+                identifiers[node.name.value] = node
             elif type(node) == FunctionCall:
                 name = node.name
-                print(identifiers.keys())
                 if name in list(identifiers.keys()):
                     func = identifiers[name]
                     interpreter = Interpreter(func.code)
                     temp = identifiers
                     temp.update(identifiers["global"])
                     dic = {"global": temp}
-
+                    if len(func.args) != len(node.args):
+                        return Error(
+                            "ParametersNotProper",
+                            f"Parameters no count check karo {node.pos} aa function call ma",
+                        )
+                    for i in range(len(node.args)):
+                        temp[func.args[i].value] = node.args[i]
                     interpreter.interpret(temp)
+
                 else:
                     func = identifiers["global"][name]
+                    interpreter = Interpreter(func.code)
+                    temp = identifiers
+                    temp.update(identifiers["global"])
+                    dic = {"global": temp}
+                    if len(func.args) != len(node.args):
+                        return Error(
+                            "ParametersNotProper",
+                            f"Parameters no count check karo {node.pos} aa function call ma",
+                        )
+                    for i in range(len(node.args)):
+                        temp[func.args[i].value] = node.args[i]
+                    interpreter.interpret(temp)
 
     def get_list(self, identifiers, node):
         lst = []
@@ -142,6 +160,11 @@ class Interpreter:
                     right = identifiers["global"][expr.right.value]
             else:
                 right = self.solve_expr(expr.right, identifiers)
+            if type(left) == Token:
+                left = left.value
+            if type(right) == Token:
+                right = right.value
+            print(left, right)
             if tt == tt_add:
                 return left + right
             elif tt == tt_sub:
